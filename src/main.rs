@@ -3,7 +3,7 @@ use std::collections::LinkedList;
 
 #[derive(Debug)]
 enum Token {
-    RESERVED(char),
+    RESERVED(&'static str),
     NUMBER(u32),
     EOF(),
 }
@@ -13,9 +13,9 @@ fn main()
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 { panic!("invalid the number of args (expected: 1)"); }
 
-    let mut s: String = args[1].clone();
+    let s: &String = &args[1];
 
-    let mut token: LinkedList<Token> = tokenize(&mut s);
+    let mut token: LinkedList<Token> = tokenize(s);
 
     //println!("{:?}", token);
 
@@ -27,8 +27,8 @@ fn main()
 
     loop {
         match consume(&mut token) {
-            Token::RESERVED('+') => println!("    add rax, {}", consume_number(&mut token)),
-            Token::RESERVED('-') => println!("    sub rax, {}", consume_number(&mut token)),
+            Token::RESERVED("+") => println!("    add rax, {}", consume_number(&mut token)),
+            Token::RESERVED("-") => println!("    sub rax, {}", consume_number(&mut token)),
             Token::EOF() => break,
             _ => panic!("invalid input is found."),
         }
@@ -38,7 +38,7 @@ fn main()
     println!("");
 }
 
-fn tokenize(s: &mut String) -> LinkedList<Token>
+fn tokenize(s: &String) -> LinkedList<Token>
 {
     let mut token: LinkedList<Token> = LinkedList::new();
     let mut tmp_str = String::new();
@@ -47,12 +47,19 @@ fn tokenize(s: &mut String) -> LinkedList<Token>
         if x == ' ' { continue; }
         match x {
             '0' ..= '9' => tmp_str.push(x),
-            '+' | '-' => {
+            '+' => {
                 if !tmp_str.is_empty() {
                     token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
                     tmp_str.clear();
                 }
-                token.push_back(Token::RESERVED(x));
+                token.push_back(Token::RESERVED("+"));
+            },
+            '-' => {
+                if !tmp_str.is_empty() {
+                    token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
+                    tmp_str.clear();
+                }
+                token.push_back(Token::RESERVED("-"));
             },
             _ => panic!("invalid input is found."),
         }
