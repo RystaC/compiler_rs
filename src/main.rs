@@ -3,7 +3,7 @@ use std::collections::LinkedList;
 
 #[derive(Debug)]
 enum Token {
-    RESERVED(&'static str),
+    RESERVED(String),
     NUMBER(u32),
     EOF(),
 }
@@ -26,10 +26,10 @@ fn main()
     println!("    mov rax, {}", consume_number(&mut token));
 
     loop {
-        match consume(&mut token) {
-            Token::RESERVED("+") => println!("    add rax, {}", consume_number(&mut token)),
-            Token::RESERVED("-") => println!("    sub rax, {}", consume_number(&mut token)),
-            Token::EOF() => break,
+        match consume(&mut token).as_str() {
+            "+" => println!("    add rax, {}", consume_number(&mut token)),
+            "-" => println!("    sub rax, {}", consume_number(&mut token)),
+            "EOF" => break,
             _ => panic!("invalid input is found."),
         }
     }
@@ -47,19 +47,14 @@ fn tokenize(s: &String) -> LinkedList<Token>
         if x == ' ' { continue; }
         match x {
             '0' ..= '9' => tmp_str.push(x),
-            '+' => {
+            '+' | '-' => {
                 if !tmp_str.is_empty() {
                     token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
                     tmp_str.clear();
                 }
-                token.push_back(Token::RESERVED("+"));
-            },
-            '-' => {
-                if !tmp_str.is_empty() {
-                    token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
-                    tmp_str.clear();
-                }
-                token.push_back(Token::RESERVED("-"));
+                tmp_str.push(x);
+                token.push_back(Token::RESERVED(tmp_str.clone()));
+                tmp_str.clear();
             },
             _ => panic!("invalid input is found."),
         }
@@ -82,10 +77,11 @@ fn consume_number(token: &mut LinkedList<Token>) -> u32
     }
 }
 
-fn consume(token: &mut LinkedList<Token>) -> Token
+fn consume(token: &mut LinkedList<Token>) -> String
 {
     match token.pop_front() {
-        Some(t) => t,
+        Some(Token::RESERVED(s)) => s,
+        Some(Token::EOF()) => "EOF".to_string(),
         _ => panic!("invalid input is found."),
     }
 }
