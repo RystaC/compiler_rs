@@ -5,7 +5,7 @@ use std::collections::LinkedList;
 enum Token {
     RESERVED(String),
     NUMBER(u32),
-    EOF(),
+    EOF,
 }
 
 fn main()
@@ -65,7 +65,7 @@ fn tokenize(s: &String) -> LinkedList<Token>
         token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
         tmp_str.clear();
     }
-    token.push_back(Token::EOF());
+    token.push_back(Token::EOF);
 
     token
 }
@@ -82,7 +82,7 @@ fn consume(token: &mut LinkedList<Token>) -> Option<String>
 {
     match token.pop_front() {
         Some(Token::RESERVED(s)) => Some(s),
-        Some(Token::EOF()) => None,
+        Some(Token::EOF) => None,
         _ => panic!("invalid input is found."),
     }
 }
