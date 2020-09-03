@@ -24,14 +24,15 @@ fn main()
     println!("main:");
 
     println!("    mov rax, {}", consume_number(&mut token));
-
+    
     loop {
-        match consume(&mut token).as_str() {
-            "+" => println!("    add rax, {}", consume_number(&mut token)),
-            "-" => println!("    sub rax, {}", consume_number(&mut token)),
-            "EOF" => break,
-            _ => panic!("invalid input is found."),
+        if let Some(s) = consume(&mut token) { match s.as_str() {
+                "+" => println!("    add rax, {}", consume_number(&mut token)),
+                "-" => println!("    sub rax, {}", consume_number(&mut token)),
+                _ => panic!("invalid input is found."),
+            }
         }
+        else { break; } 
     }
 
     println!("    ret");
@@ -77,11 +78,11 @@ fn consume_number(token: &mut LinkedList<Token>) -> u32
     }
 }
 
-fn consume(token: &mut LinkedList<Token>) -> String
+fn consume(token: &mut LinkedList<Token>) -> Option<String>
 {
     match token.pop_front() {
-        Some(Token::RESERVED(s)) => s,
-        Some(Token::EOF()) => "EOF".to_string(),
+        Some(Token::RESERVED(s)) => Some(s),
+        Some(Token::EOF()) => None,
         _ => panic!("invalid input is found."),
     }
 }
