@@ -44,27 +44,36 @@ fn tokenize(s: &String) -> LinkedList<Token>
     let mut token: LinkedList<Token> = LinkedList::new();
     let mut tmp_str = String::new();
 
-    for x in s.as_str().chars() {
-        if x == ' ' { continue; }
-        match x {
-            '0' ..= '9' => tmp_str.push(x),
-            '+' | '-' => {
-                if !tmp_str.is_empty() {
-                    token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
+    let mut str_iter = s.chars().peekable();
+
+    loop {
+        if let Some(next) = str_iter.next() {
+            match next {
+                ' ' => continue,
+
+                '0' ..= '9' =>{
+                    tmp_str.push(next);
+                    match str_iter.peek() {
+                        Some('0' ..= '9') => {},
+                        _ => {
+                            token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
+                            tmp_str.clear();
+                        }
+                    }
+                },
+
+                '+' | '-' =>{
+                    tmp_str.push(next);
+                    token.push_back(Token::RESERVED(tmp_str.clone()));
                     tmp_str.clear();
-                }
-                tmp_str.push(x);
-                token.push_back(Token::RESERVED(tmp_str.clone()));
-                tmp_str.clear();
-            },
-            _ => panic!("invalid input is found."),
+                },
+                _ => panic!("invalid input is found."),
+            }
         }
+        else { break; }
+        
     }
 
-    if !tmp_str.is_empty() {
-        token.push_back(Token::NUMBER(tmp_str.parse().unwrap()));
-        tmp_str.clear();
-    }
     token.push_back(Token::EOF);
 
     token
