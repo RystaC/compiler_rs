@@ -54,7 +54,7 @@ fn tokenize(s: &String) -> LinkedList<Token>
                     }
                 },
 
-                '+' | '-' | '*' | '/' =>{
+                '+' | '-' | '*' | '/' | '(' | ')' =>{
                     tmp_str.push(next);
                     token.push_back(Token::RESERVED(tmp_str.clone()));
                     tmp_str.clear();
