@@ -1,13 +1,6 @@
 use std::env;
 use std::collections::LinkedList;
 
-#[derive(Debug)]
-enum Token {
-    RESERVED(String),
-    NUMBER(u32),
-    EOF,
-}
-
 fn main()
 {
     let args: Vec<String> = env::args().collect();
@@ -19,24 +12,23 @@ fn main()
 
     //println!("{:?}", token);
 
+    let tree = expr(&mut token);
+
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
 
-    println!("    mov rax, {}", consume_number(&mut token));
-    
-    loop {
-        if let Some(s) = consume(&mut token) { match s.as_str() {
-                "+" => println!("    add rax, {}", consume_number(&mut token)),
-                "-" => println!("    sub rax, {}", consume_number(&mut token)),
-                _ => panic!("invalid input is found."),
-            }
-        }
-        else { break; } 
-    }
+    generate(&tree);
 
-    println!("    ret");
-    println!("");
+    println!("    pop rax");
+    println!("    ret\n");
+}
+
+#[derive(Debug)]
+enum Token {
+    RESERVED(String),
+    NUMBER(u32),
+    EOF,
 }
 
 fn tokenize(s: &String) -> LinkedList<Token>
@@ -62,7 +54,7 @@ fn tokenize(s: &String) -> LinkedList<Token>
                     }
                 },
 
-                '+' | '-' =>{
+                '+' | '-' | '*' | '/' =>{
                     tmp_str.push(next);
                     token.push_back(Token::RESERVED(tmp_str.clone()));
                     tmp_str.clear();
@@ -83,15 +75,110 @@ fn consume_number(token: &mut LinkedList<Token>) -> u32
 {
     match token.pop_front() {
         Some(Token::NUMBER(x)) => x,
-        _ => panic!("invalid input is found."),
+        _ => panic!("token is not a number."),
     }
 }
 
-fn consume(token: &mut LinkedList<Token>) -> Option<String>
+fn consume(token: &mut LinkedList<Token>, expect: &str) -> bool
 {
-    match token.pop_front() {
-        Some(Token::RESERVED(s)) => Some(s),
-        Some(Token::EOF) => None,
-        _ => panic!("invalid input is found."),
+    if let Some(Token::RESERVED(s)) = token.front() {
+        if s.as_str() == expect {
+            token.pop_front();
+            return true;
+        }
+    }
+
+    false
+}
+
+fn consume_expect(token: &mut LinkedList<Token>, expect: &str) {
+    if let Some(Token::RESERVED(s)) = token.front() {
+        if s.as_str() == expect {
+            token.pop_front();
+        }
+        else { panic!("token is not {}.", s); }
+    }
+    else { panic!("token is not Token::RESERVED(_)."); }
+}
+
+#[derive(Clone)]
+enum Node {
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    NUM(u32),
+}
+
+#[derive(Clone)]
+struct Tree {
+    value: Node,
+    left: Option<Box<Tree>>,
+    right: Option<Box<Tree>>,
+}
+
+fn expr(token: &mut LinkedList<Token>) -> Tree {
+    let mut tree = mul(token);
+
+    loop {
+        if consume(token, "+") {
+            tree = Tree { value: Node::ADD, left: Some(Box::new(tree.clone())), right: Some(Box::new(mul(token))) };
+        }
+        else if consume(token, "-") {
+            tree = Tree { value: Node::SUB, left: Some(Box::new(tree.clone())), right: Some(Box::new(mul(token))) };
+        }
+        else { break; }
+    }
+
+    tree
+}
+
+fn mul(token: &mut LinkedList<Token>) -> Tree {
+    let mut tree = primary(token);
+    
+    loop {
+        if consume(token, "*") {
+            tree = Tree { value: Node::MUL, left: Some(Box::new(tree.clone())), right: Some(Box::new(primary(token))) };
+        }
+        else if consume(token, "/") {
+            tree = Tree { value: Node::DIV, left: Some(Box::new(tree.clone())), right: Some(Box::new(primary(token))) };
+        }
+        else { break; }
+    }
+
+    tree
+}
+
+fn primary(token: &mut LinkedList<Token>) -> Tree {
+    if consume(token, "(") {
+        let tree = expr(token);
+        consume_expect(token, ")");
+        tree
+    }
+    else {
+        Tree { value: Node::NUM(consume_number(token)), left: None, right: None }
+    }
+}
+
+fn generate(tree: &Tree) {
+    if let Node::NUM(num) = tree.value {
+        println!("    push {}", num);
+    }
+    else {
+        if let Some(ref left) = tree.left { generate(&left); }
+        if let Some(ref right) = tree.right { generate(&right); }
+
+        println!("    pop rdi");
+        println!("    pop rax");
+
+        match tree.value {
+            Node::ADD => println!("    add rax, rdi"),
+            Node::SUB => println!("    sub rax, rdi"),
+            Node::MUL => println!("    imul rax, rdi"),
+            Node::DIV => println!("    cqo\n    idiv rdi"),
+            _ => panic!("some input is not a expression."),
+        }
+
+        println!("    push rax");
     }
 }
